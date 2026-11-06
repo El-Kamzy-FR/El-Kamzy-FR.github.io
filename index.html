@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Charly · El-Kamzy-FR</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700;800&family=Manrope:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+/* Un seul univers sombre (celui de Nexus et Pulse) : la scène 3D vit derrière tout le contenu.
+   Mise en page : colonnes asymétriques qui alternent gauche / droite pour laisser respirer la forme 3D. */
+:root {
+  --bg: #07070A;
+  --panel: rgba(17, 17, 22, 0.72);
+  --line: rgba(139, 92, 246, 0.22);
+  --text: #F4F4F6;
+  --muted: #A6A6B4;
+  --faint: #6E6E7E;
+  --violet: #8B5CF6;
+  --cyan: #22D3EE;
+  --ok: #34D399;
+  --warn: #FBBF24;
+  --display: 'Unbounded', 'Segoe UI', system-ui, sans-serif;
+  --body: 'Manrope', 'Segoe UI', system-ui, sans-serif;
+  --mono: 'JetBrains Mono', 'Cascadia Code', Consolas, monospace;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.65 var(--body); overflow-x: hidden; }
+::selection { background: var(--violet); color: #fff; }
+a { color: inherit; }
+:focus-visible { outline: 2px solid var(--cyan); outline-offset: 3px; border-radius: 6px; }
+
+#scene { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 0; display: block; }
+.grain { position: fixed; inset: 0; z-index: 1; pointer-events: none; opacity: .06;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); }
+.vignette { position: fixed; inset: 0; z-index: 1; pointer-events: none;
+  background: radial-gradient(ellipse at 50% 40%, transparent 40%, rgba(7,7,10,.85) 100%); }
+
+/* Curseur lumineux */
+.glow { position: fixed; left: 0; top: 0; width: 420px; height: 420px; margin: -210px 0 0 -210px; border-radius: 50%;
+  pointer-events: none; z-index: 1; background: radial-gradient(circle, rgba(139,92,246,.16), rgba(34,211,238,.06) 40%, transparent 70%);
+  transform: translate3d(-500px,-500px,0); }
+
+/* Barre de progression + navigation */
+.progress { position: fixed; top: 0; left: 0; height: 3px; width: 100%; z-index: 20; transform-origin: 0 50%; transform: scaleX(0);
+  background: linear-gradient(90deg, var(--violet), var(--cyan)); }
+nav.top { position: fixed; top: 16px; left: 50%; transform: translateX(-50%); z-index: 20; display: flex; gap: 4px; padding: 6px;
+  border: 1px solid var(--line); border-radius: 999px; background: rgba(10,10,14,.6); backdrop-filter: blur(14px); }
+nav.top a { text-decoration: none; font: 600 13px var(--body); color: var(--muted); padding: 8px 14px; border-radius: 999px; transition: color .2s, background .2s; }
+nav.top a:hover, nav.top a.on { color: var(--text); background: rgba(139,92,246,.18); }
+.brand { position: fixed; top: 22px; left: 28px; z-index: 20; font: 700 15px var(--display); letter-spacing: .5px; text-decoration: none; }
+.brand span { color: var(--cyan); }
+
+main { position: relative; z-index: 2; }
+section { min-height: 100vh; display: flex; align-items: center; padding: 120px max(24px, 6vw); }
+.wrap { width: 100%; max-width: 1240px; margin: 0 auto; display: grid; grid-template-columns: repeat(12, 1fr); gap: 24px; }
+.left { grid-column: 1 / span 7; }
+.right { grid-column: 6 / span 7; }
+.wide { grid-column: 1 / -1; }
+
+.eyebrow { font: 600 12px var(--mono); letter-spacing: 3px; text-transform: uppercase; color: var(--cyan); display: flex; align-items: center; gap: 12px; }
+.eyebrow::before { content: ""; width: 34px; height: 1px; background: linear-gradient(90deg, var(--violet), var(--cyan)); }
+h1, h2, h3 { font-family: var(--display); text-wrap: balance; margin: 0; }
+h2 { font-size: clamp(34px, 5.2vw, 64px); line-height: 1.02; letter-spacing: -1.5px; margin: 16px 0 22px; }
+.grad { background: linear-gradient(100deg, var(--violet), var(--cyan) 70%); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.lead { color: var(--muted); font-size: 18px; max-width: 60ch; }
+
+/* Hero */
+#accueil { min-height: 100vh; padding-top: 140px; }
+.hello { font: 500 14px var(--mono); color: var(--muted); }
+.hello b { color: var(--cyan); font-weight: 600; }
+h1 { font-size: clamp(64px, 13vw, 176px); line-height: .9; letter-spacing: -4px; margin: 18px 0 14px; }
+h1 .ch { display: inline-block; }
+.role { font: 600 clamp(18px, 2.2vw, 26px)/1.35 var(--body); max-width: 30ch; }
+.typed { margin-top: 26px; font: 500 15px var(--mono); color: var(--muted); min-height: 1.6em; }
+.typed .p { color: var(--cyan); } .typed .cur { display: inline-block; width: 9px; height: 1.1em; vertical-align: -3px; background: var(--cyan); margin-left: 3px; animation: blink 1s steps(1) infinite; }
+@keyframes blink { 50% { opacity: 0; } }
+.chips { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 30px; }
+.chip { font: 600 13px var(--body); padding: 8px 14px; border-radius: 999px; border: 1px solid var(--line); background: var(--panel); backdrop-filter: blur(10px); display: inline-flex; align-items: center; gap: 8px; }
+.chip i { width: 8px; height: 8px; border-radius: 50%; background: var(--ok); box-shadow: 0 0 12px var(--ok); }
+.chip i.c { background: var(--cyan); box-shadow: 0 0 12px var(--cyan); }
+.chip i.v { background: var(--violet); box-shadow: 0 0 12px var(--violet); }
+.cta { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 38px; }
+.btn { position: relative; display: inline-flex; align-items: center; gap: 10px; text-decoration: none; font: 700 15px var(--body); padding: 15px 24px; border-radius: 14px;
+  border: 1px solid var(--line); background: rgba(20,20,26,.7); transition: border-color .25s; will-change: transform; }
+.btn.main { border: 0; background: linear-gradient(100deg, var(--violet), var(--cyan)); color: #07070A; }
+.btn:hover { border-color: var(--cyan); }
+.scrollhint { position: absolute; left: 50%; bottom: 28px; transform: translateX(-50%); font: 500 11px var(--mono); letter-spacing: 3px; color: var(--faint); display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.scrollhint span { width: 1px; height: 46px; background: linear-gradient(var(--cyan), transparent); animation: drip 1.8s ease-in-out infinite; transform-origin: top; }
+@keyframes drip { 0% { transform: scaleY(0); } 50% { transform: scaleY(1); } 100% { transform: scaleY(1); opacity: 0; } }
+
+/* Chiffres */
+.stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-top: 56px; }
+.stat { padding: 18px 20px; border-radius: 16px; border: 1px solid var(--line); background: var(--panel); backdrop-filter: blur(12px); }
+.stat b { display: block; font: 700 30px var(--display); font-variant-numeric: tabular-nums; }
+.stat span { color: var(--muted); font-size: 13px; }
+
+/* Panneaux de verre */
+.glass { border: 1px solid var(--line); border-radius: 24px; background: var(--panel); backdrop-filter: blur(16px); padding: clamp(22px, 3vw, 38px); }
+
+/* Parcours */
+.timeline { display: grid; gap: 16px; margin-top: 10px; }
+.step { position: relative; display: grid; grid-template-columns: 120px 1fr auto; gap: 18px; align-items: center; padding: 22px 24px; border-radius: 18px; border: 1px solid var(--line); background: var(--panel); backdrop-filter: blur(14px); transform-style: preserve-3d; will-change: transform; }
+.step .yr { font: 600 13px var(--mono); color: var(--faint); }
+.step h3 { font-size: 22px; }
+.step p { margin: 4px 0 0; color: var(--muted); font-size: 14px; }
+.tag { font: 700 11px var(--mono); letter-spacing: 1.5px; padding: 6px 10px; border-radius: 999px; white-space: nowrap; }
+.t-ok { color: var(--ok); background: rgba(52,211,153,.12); } .t-now { color: var(--cyan); background: rgba(34,211,238,.12); } .t-goal { color: #C4B5FD; background: rgba(139,92,246,.16); }
+.step.now { border-color: rgba(34,211,238,.5); box-shadow: 0 0 0 1px rgba(34,211,238,.15), 0 20px 60px -20px rgba(34,211,238,.35); }
+.alt { margin-top: 18px; font: 500 14px var(--mono); color: var(--muted); }
+
+/* Expérience */
+.missions { list-style: none; padding: 0; margin: 26px 0 0; display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.missions li { padding: 18px 18px 18px 20px; border-radius: 16px; border: 1px solid var(--line); background: rgba(12,12,16,.55); position: relative; overflow: hidden; }
+.missions li::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: linear-gradient(var(--violet), var(--cyan)); }
+.missions b { display: block; font: 700 14px var(--body); margin-bottom: 4px; }
+.missions span { color: var(--muted); font-size: 14px; }
+.meta { color: var(--faint); font: 500 13px var(--mono); }
+
+/* Compétences */
+.skills { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-top: 10px; }
+.skill { padding: 22px; border-radius: 18px; border: 1px solid var(--line); background: var(--panel); backdrop-filter: blur(14px); }
+.skill h3 { font-size: 15px; letter-spacing: .3px; margin-bottom: 14px; display: flex; align-items: center; gap: 10px; }
+.skill h3 em { font-style: normal; font: 600 11px var(--mono); color: var(--cyan); }
+.pills { display: flex; flex-wrap: wrap; gap: 8px; }
+.pills span { font: 600 13px var(--body); padding: 7px 12px; border-radius: 10px; background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.07); transition: transform .2s, border-color .2s, background .2s; }
+.pills span:hover { transform: translateY(-3px); border-color: var(--cyan); background: rgba(34,211,238,.08); }
+.marquee { grid-column: 1 / -1; overflow: hidden; margin-top: 36px; mask-image: linear-gradient(90deg, transparent, #000 10%, #000 90%, transparent); }
+.marquee div { display: flex; gap: 46px; width: max-content; animation: slide 40s linear infinite; font: 800 clamp(28px, 4vw, 52px) var(--display); color: transparent; -webkit-text-stroke: 1px rgba(166,166,180,.35); white-space: nowrap; }
+.marquee div b { color: rgba(139,92,246,.6); -webkit-text-stroke: 0; font-weight: 800; }
+@keyframes slide { to { transform: translateX(-50%); } }
+
+/* Projets */
+.projects { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(2, 1fr); gap: 22px; perspective: 1400px; }
+.card { position: relative; padding: 28px; border-radius: 22px; border: 1px solid var(--line); background: linear-gradient(160deg, rgba(24,22,34,.85), rgba(10,10,14,.85)); backdrop-filter: blur(14px);
+  transform-style: preserve-3d; will-change: transform; overflow: hidden; min-height: 300px; display: flex; flex-direction: column; }
+.card::after { content: ""; position: absolute; inset: 0; pointer-events: none; background: radial-gradient(600px circle at var(--mx, 50%) var(--my, 0%), rgba(34,211,238,.14), transparent 40%); }
+.card .top { display: flex; justify-content: space-between; align-items: center; gap: 12px; transform: translateZ(40px); }
+.card h3 { font-size: 28px; letter-spacing: -.5px; }
+.card .ico { width: 46px; height: 46px; border-radius: 14px; display: grid; place-items: center; background: linear-gradient(140deg, rgba(139,92,246,.35), rgba(34,211,238,.25)); border: 1px solid rgba(255,255,255,.1); }
+.card .ico svg { width: 24px; height: 24px; stroke: #fff; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.card p { color: var(--muted); margin: 16px 0 18px; transform: translateZ(26px); }
+.card ul { list-style: none; padding: 0; margin: 0 0 20px; display: grid; gap: 6px; font-size: 14px; transform: translateZ(20px); }
+.card ul li::before { content: "▸ "; color: var(--cyan); }
+.card .stack { margin-top: auto; display: flex; flex-wrap: wrap; gap: 6px; transform: translateZ(30px); }
+.card .stack span { font: 600 11.5px var(--mono); padding: 5px 9px; border-radius: 8px; background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.08); color: #D4D4DC; }
+.status { font: 700 11px var(--mono); letter-spacing: 1px; display: inline-flex; align-items: center; gap: 7px; }
+.status i { width: 7px; height: 7px; border-radius: 50%; }
+
+/* Contact */
+#contact .glass { text-align: left; }
+.big { font: 800 clamp(40px, 7vw, 96px)/.95 var(--display); letter-spacing: -2.5px; margin: 18px 0 26px; }
+footer { position: relative; z-index: 2; padding: 30px max(24px, 6vw) 40px; color: var(--faint); font: 500 13px var(--mono); display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+
+@media (max-width: 900px) {
+  .left, .right { grid-column: 1 / -1; }
+  .stats { grid-template-columns: repeat(2, 1fr); }
+  .missions, .skills, .projects { grid-template-columns: 1fr; }
+  .step { grid-template-columns: 1fr; }
+  nav.top { display: none; }
+  h1 { letter-spacing: -2px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .marquee div, .typed .cur, .scrollhint span { animation: none; }
+}
+</style>
+</head>
+<body>
+<canvas id="scene" aria-hidden="true"></canvas>
+<div class="vignette"></div>
+<div class="grain"></div>
+<div class="glow" id="glow"></div>
+<div class="progress" id="progress"></div>
+
+<a class="brand" href="#accueil">EL-KAMZY<span>.</span>FR</a>
+<nav class="top" aria-label="Sections">
+  <a href="#accueil" data-s="0">Accueil</a>
+  <a href="#parcours" data-s="1">Parcours</a>
+  <a href="#experience" data-s="2">Expérience</a>
+  <a href="#competences" data-s="3">Compétences</a>
+  <a href="#projets" data-s="4">Projets</a>
+  <a href="#contact" data-s="5">Contact</a>
+</nav>
+
+<main>
+  <!-- 00 · Accueil -->
+  <section id="accueil" data-shape="0">
+    <div class="wrap">
+      <div class="left">
+        <div class="hello">PS&gt; <b>whoami</b></div>
+        <h1 id="name" aria-label="Charly"><span class="grad">Charly</span></h1>
+        <p class="role">Administrateur systèmes &amp; réseaux en alternance. Je sécurise, j'automatise, et je construis mes propres outils.</p>
+        <div class="typed" aria-live="polite"><span class="p">PS&gt;</span> <span id="typed">Get-Projet -Nom Nexus, Pulse, StationBlanche</span><span class="cur"></span></div>
+        <div class="chips">
+          <span class="chip"><i></i>BTS GMSI obtenu</span>
+          <span class="chip"><i class="c"></i>Licence ASR · 2026 → 2027</span>
+          <span class="chip"><i class="v"></i>2 logiciels en v1.0</span>
+        </div>
+        <div class="cta">
+          <a class="btn main magnet" href="#projets">Voir mes projets →</a>
+          <a class="btn magnet" href="https://github.com/El-Kamzy-FR">GitHub · El-Kamzy-FR</a>
+        </div>
+      </div>
+      <div class="stats wide">
+        <div class="stat"><b data-count="42">42</b><span>réglages Windows annulables dans Pulse</span></div>
+        <div class="stat"><b>2 sites</b><span>Hyper-V, baies SAN et Veeam déployés en alternance</span></div>
+        <div class="stat"><b data-count="7" data-suffix=" s">7 s</b><span>pour cartographier 373 Go de disque (Pulse)</span></div>
+        <div class="stat"><b data-count="5000" data-prefix="≈ ">≈ 5000</b><span>lignes de C# et XAML écrites pour Pulse</span></div>
+      </div>
+    </div>
+    <div class="scrollhint">DÉFILER<span></span></div>
+  </section>
+
+  <!-- 01 · Parcours -->
+  <section id="parcours" data-shape="1">
+    <div class="wrap">
+      <div class="right glass reveal">
+        <div class="eyebrow">01 · Parcours</div>
+        <h2>Un cursus <span class="grad">100 % alternance</span></h2>
+        <div class="timeline">
+          <div class="step tilt"><div class="yr">2024 → 2026</div><div><h3>BTS GMSI</h3><p>Gestionnaire en maintenance et support informatique</p></div><span class="tag t-ok">OBTENU</span></div>
+          <div class="step tilt now"><div class="yr">2026 → 2027</div><div><h3>Licence ASR</h3><p>Administrateur systèmes et réseaux (bac +3)</p></div><span class="tag t-now">EN COURS</span></div>
+          <div class="step tilt"><div class="yr">2027 → 2029</div><div><h3>Master</h3><p>Bac +5, toujours en alternance</p></div><span class="tag t-goal">OBJECTIF</span></div>
+        </div>
+        <p class="alt">// en entreprise depuis 2024, au sein d'une équipe infrastructure</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 02 · Expérience -->
+  <section id="experience" data-shape="2">
+    <div class="wrap">
+      <div class="left glass reveal" style="grid-column: 1 / span 8">
+        <div class="eyebrow">02 · Expérience</div>
+        <h2>Alternant <span class="grad">admin systèmes &amp; réseaux</span></h2>
+        <p class="meta">Septembre 2024 → aujourd'hui · équipe de 5 : 1 manager, 2 ingénieurs, 1 technicien et moi</p>
+        <ul class="missions">
+          <li><b>Infrastructure</b><span>Déploiement d'une infrastructure Hyper-V sur deux sites, baies SAN et sauvegardes Veeam.</span></li>
+          <li><b>Microsoft 365</b><span>Administration de tenants clients (Entra ID, Exchange Online) et intégration du filtrage Hornetsecurity.</span></li>
+          <li><b>Automatisation</b><span>Circuit d'approbation des demandes d'avoir avec Power Automate et Microsoft Forms.</span></li>
+          <li><b>Sécurité</b><span>Conception d'une station blanche de décontamination USB, du choix des outils aux scripts.</span></li>
+          <li><b>Documentation</b><span>Procédures techniques rédigées pour le wiki de l'équipe (BookStack).</span></li>
+          <li><b>Support</b><span>Maintenance du parc, postes Windows, comptes et accès utilisateurs.</span></li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- 03 · Compétences -->
+  <section id="competences" data-shape="3">
+    <div class="wrap">
+      <div class="right reveal">
+        <div class="eyebrow">03 · Compétences</div>
+        <h2>Du <span class="grad">rack</span> au <span class="grad">script</span></h2>
+        <div class="skills">
+          <div class="skill"><h3>Systèmes &amp; infra <em>// on-prem</em></h3><div class="pills"><span>Windows Server</span><span>Active Directory</span><span>DNS · DHCP · GPO</span><span>Hyper-V</span><span>Veeam</span><span>Ubuntu Server</span><span>Debian</span></div></div>
+          <div class="skill"><h3>Cloud Microsoft <em>// M365</em></h3><div class="pills"><span>Microsoft 365</span><span>Entra ID</span><span>Exchange Online</span><span>Intune</span><span>Azure</span><span>Power Automate</span></div></div>
+          <div class="skill"><h3>Réseaux &amp; sécurité <em>// défense</em></h3><div class="pills"><span>TCP/IP</span><span>VLAN</span><span>VPN</span><span>pfSense</span><span>Defender</span><span>Hornetsecurity</span><span>ClamAV</span></div></div>
+          <div class="skill"><h3>Automatisation &amp; dev <em>// code</em></h3><div class="pills"><span>PowerShell</span><span>C# · .NET 10</span><span>WPF</span><span>Python</span><span>Bash</span><span>SQLite</span><span>Git · Actions</span><span>Claude Code · MCP</span></div></div>
+        </div>
+      </div>
+      <div class="marquee" aria-hidden="true"><div>
+        <span>WINDOWS SERVER</span><b>✦</b><span>ENTRA ID</span><b>✦</b><span>HYPER-V</span><b>✦</b><span>POWERSHELL</span><b>✦</b><span>PFSENSE</span><b>✦</b><span>C# .NET</span><b>✦</b>
+        <span>WINDOWS SERVER</span><b>✦</b><span>ENTRA ID</span><b>✦</b><span>HYPER-V</span><b>✦</b><span>POWERSHELL</span><b>✦</b><span>PFSENSE</span><b>✦</b><span>C# .NET</span><b>✦</b>
+      </div></div>
+    </div>
+  </section>
+
+  <!-- 04 · Projets -->
+  <section id="projets" data-shape="4">
+    <div class="wrap">
+      <div class="wide reveal">
+        <div class="eyebrow">04 · Projets</div>
+        <h2>Ce que je <span class="grad">construis</span></h2>
+      </div>
+      <div class="projects">
+        <article class="card tilt">
+          <div class="top"><div class="ico"><svg viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="12" rx="4"/><path d="M7 12h4M9 10v4M15.5 11h.01M17.5 13h.01"/></svg></div><span class="status" style="color:var(--ok)"><i style="background:var(--ok)"></i>V1.0 · AU QUOTIDIEN</span></div>
+          <h3 style="margin-top:18px">Nexus</h3>
+          <p>Mon launcher de jeux : toutes mes plateformes dans une seule bibliothèque, pour ne plus ouvrir les autres.</p>
+          <ul><li>Steam, Epic, Riot, Xbox et jeux autonomes</li><li>Temps de jeu exact, jeux possédés non installés</li><li>Mises à jour automatiques via GitHub Releases</li></ul>
+          <div class="stack"><span>C#</span><span>WPF</span><span>.NET 10</span><span>SQLite</span><span>GitHub Actions</span></div>
+        </article>
+        <article class="card tilt">
+          <div class="top"><div class="ico"><svg viewBox="0 0 24 24"><path d="M3 12h4l2-6 4 12 2-6h6"/></svg></div><span class="status" style="color:var(--ok)"><i style="background:var(--ok)"></i>V1.0 · EN PRODUCTION</span></div>
+          <h3 style="margin-top:18px">Pulse</h3>
+          <p>Optimisation et surveillance de mes PC, sans jamais toucher à Defender ni à l'UAC.</p>
+          <ul><li>Analyse notée sur 100, 42 réglages annulables</li><li>Profil Jeu automatique au lancement d'un jeu</li><li>Santé batterie, espace disque, rapport HTML</li></ul>
+          <div class="stack"><span>C#</span><span>WPF</span><span>PowerShell</span><span>Win32</span><span>Inno Setup</span></div>
+        </article>
+        <article class="card tilt">
+          <div class="top"><div class="ico"><svg viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M9 12l2 2 4-4"/></svg></div><span class="status" style="color:var(--warn)"><i style="background:var(--warn)"></i>ENTREPRISE · V6 EN TEST</span></div>
+          <h3 style="margin-top:18px">Station Blanche</h3>
+          <p>Borne de décontamination de clés USB, de l'installation aux scripts de déploiement.</p>
+          <ul><li>Double moteur antivirus</li><li>Identification du support, rapports PDF</li><li>Interface kiosque verrouillée</li></ul>
+          <div class="stack"><span>Ubuntu 24.04</span><span>ClamAV</span><span>GravityZone</span><span>Bash</span></div>
+        </article>
+        <article class="card tilt">
+          <div class="top"><div class="ico"><svg viewBox="0 0 24 24"><path d="M3 11l9-7 9 7"/><rect x="6" y="11" width="12" height="9" rx="1.5"/><path d="M9 15h6M9 18h6"/></svg></div><span class="status" style="color:var(--muted)"><i style="background:var(--muted)"></i>EN CONCEPTION</span></div>
+          <h3 style="margin-top:18px">Homelab</h3>
+          <p>Mon infra perso, isolée du réseau de la maison, pour expérimenter sans limite.</p>
+          <ul><li>Hyperviseur et pare-feu virtualisé</li><li>NAS de plusieurs To, switch 2,5 Gb</li><li>Médias, serveurs de jeu, IA locale</li></ul>
+          <div class="stack"><span>Virtualisation</span><span>pfSense</span><span>VLAN</span><span>NAS</span></div>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- 05 · Contact -->
+  <section id="contact" data-shape="5">
+    <div class="wrap">
+      <div class="left glass reveal">
+        <div class="eyebrow">05 · Contact</div>
+        <p class="big">On construit<br><span class="grad">quelque chose ?</span></p>
+        <p class="lead">Infrastructure, Microsoft 365, cybersécurité ou outils Windows : je suis ouvert aux échanges et aux opportunités pour la suite de mon alternance.</p>
+        <div class="cta">
+          <a class="btn main magnet" href="https://github.com/El-Kamzy-FR">Mon GitHub →</a>
+          <a class="btn magnet" href="#accueil">Revenir en haut ↑</a>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+<footer><span>© 2026 Charly · El-Kamzy-FR</span><span>Scène 3D : 7 000 particules en WebGL</span></footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+<script>
+(() => {
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const mobile = matchMedia('(max-width: 900px)').matches;
+  const sections = [...document.querySelectorAll('main section')];
+
+  /* ------------------------------------------------------------ scène 3D */
+  let renderer;
+  const canvas = document.getElementById('scene');
+  try { renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true }); }
+  catch (e) { canvas.style.display = 'none'; }
+
+  if (renderer) {
+    renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(55, 1, 0.1, 100);
+    camera.position.set(0, 0, 7.5);
+
+    const N = mobile ? 4200 : 7000;
+    const rnd = (a, b) => a + Math.random() * (b - a);
+
+    // Formes cibles : une par section
+    const shapes = [];
+    const make = fn => { const a = new Float32Array(N * 3); for (let i = 0; i < N; i++) { const p = fn(i); a[i*3] = p[0]; a[i*3+1] = p[1]; a[i*3+2] = p[2]; } return a; };
+    // 0 · sphère-réseau (Fibonacci + coquille)
+    shapes.push(make(i => {
+      const k = i % 2600, t = Math.acos(1 - 2 * (k + .5) / 2600), ph = Math.PI * (1 + Math.sqrt(5)) * k;
+      const r = i < 2600 ? 2.3 : rnd(.4, 2.2);
+      return [r * Math.sin(t) * Math.cos(ph), r * Math.cos(t), r * Math.sin(t) * Math.sin(ph)];
+    }));
+    // 1 · double hélice (le parcours)
+    shapes.push(make(i => {
+      const s = i / N, strand = i % 3, a = s * Math.PI * 9 + (strand === 1 ? Math.PI : 0);
+      if (strand === 2) { const b = Math.floor(s * 60) / 60, aa = b * Math.PI * 9, u = Math.random(); return [(b - .5) * 7, Math.cos(aa) * 1.2 * (1 - 2*u), Math.sin(aa) * 1.2 * (1 - 2*u)]; }
+      return [(s - .5) * 7 + rnd(-.03,.03), Math.cos(a) * 1.2 + rnd(-.05,.05), Math.sin(a) * 1.2 + rnd(-.05,.05)];
+    }));
+    // 2 · baie de serveurs (3 racks de 8 unités)
+    shapes.push(make(i => {
+      const rack = i % 3, u = Math.floor(rnd(0, 8)), x = (rack - 1) * 1.55;
+      const face = Math.random();
+      if (face < .7) return [x + rnd(-.6, .6), -2 + u * .5 + rnd(.05, .38), .45];             // façade des serveurs
+      if (face < .85) return [x + (Math.random() < .5 ? -.62 : .62), rnd(-2.05, 2.05), rnd(-.45, .45)];
+      return [x + rnd(-.62, .62), Math.random() < .5 ? -2.05 : 2.05, rnd(-.45, .45)];
+    }));
+    // 3 · nœud torique (les compétences qui s'entrelacent)
+    shapes.push(make(i => {
+      const t = (i / N) * Math.PI * 2 * 1, p = 2, q = 3, R = 1.55, r = .55;
+      const tt = t + rnd(0, .002), ph = rnd(0, Math.PI * 2);
+      const cx = (R + r * Math.cos(q * tt)) * Math.cos(p * tt), cy = (R + r * Math.cos(q * tt)) * Math.sin(p * tt), cz = r * Math.sin(q * tt);
+      const tube = .22;
+      return [cx + tube * Math.cos(ph) * Math.cos(p*tt), cy + tube * Math.cos(ph) * Math.sin(p*tt), cz + tube * Math.sin(ph)];
+    }));
+    // 4 · quatre amas (les quatre projets)
+    const centers = [[-1.9, 1.1, 0], [1.9, 1.1, 0], [-1.9, -1.1, 0], [1.9, -1.1, 0]];
+    shapes.push(make(i => {
+      const c = centers[i % 4], t = Math.acos(rnd(-1, 1)), ph = rnd(0, Math.PI * 2), r = Math.cbrt(Math.random()) * .85;
+      return [c[0] + r * Math.sin(t) * Math.cos(ph), c[1] + r * Math.cos(t), c[2] + r * Math.sin(t) * Math.sin(ph)];
+    }));
+    // 5 · onde (contact)
+    const side = Math.ceil(Math.sqrt(N));
+    shapes.push(make(i => {
+      const gx = (i % side) / side - .5, gz = Math.floor(i / side) / side - .5;
+      const x = gx * 9, z = gz * 9;
+      return [x, Math.sin(x * 1.1) * .35 + Math.cos(z * 1.3) * .35 - .6, z];
+    }));
+
+    const pos = new Float32Array(shapes[0]);
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    const seeds = new Float32Array(N); for (let i = 0; i < N; i++) seeds[i] = Math.random();
+    geo.setAttribute('aSeed', new THREE.BufferAttribute(seeds, 1));
+
+    const mat = new THREE.ShaderMaterial({
+      transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+      uniforms: { uTime: { value: 0 }, uSize: { value: (mobile ? 22 : 26) * renderer.getPixelRatio() }, uMix: { value: 0 } },
+      vertexShader: `
+        attribute float aSeed; uniform float uTime; uniform float uSize; varying vec3 vCol; varying float vA;
+        void main() {
+          vec3 p = position;
+          p += 0.035 * vec3(sin(uTime * 1.3 + aSeed * 40.0), cos(uTime * 1.1 + aSeed * 30.0), sin(uTime * 0.9 + aSeed * 20.0));
+          vec4 mv = modelViewMatrix * vec4(p, 1.0);
+          gl_Position = projectionMatrix * mv;
+          float tw = 0.65 + 0.35 * sin(uTime * 2.0 + aSeed * 60.0);
+          gl_PointSize = uSize * (0.35 + aSeed * 0.65) * tw / -mv.z;
+          vec3 violet = vec3(0.545, 0.361, 0.965), cyan = vec3(0.133, 0.827, 0.933), white = vec3(1.0);
+          float h = clamp(p.y * 0.22 + 0.5 + (aSeed - 0.5) * 0.4, 0.0, 1.0);
+          vCol = mix(violet, cyan, h);
+          if (aSeed > 0.985) vCol = white;
+          vA = 0.55 + 0.45 * tw;
+        }`,
+      fragmentShader: `
+        varying vec3 vCol; varying float vA;
+        void main() {
+          float d = length(gl_PointCoord - 0.5);
+          float a = smoothstep(0.5, 0.0, d);
+          gl_FragColor = vec4(vCol, a * a * vA);
+        }`
+    });
+    const points = new THREE.Points(geo, mat);
+    const group = new THREE.Group(); group.add(points); scene.add(group);
+
+    // Réseau de l'accueil : nœuds reliés quand ils sont proches
+    const NODES = 150, nodes = [];
+    for (let k = 0; k < NODES; k++) {
+      const t = Math.acos(1 - 2 * (k + .5) / NODES), ph = Math.PI * (1 + Math.sqrt(5)) * k;
+      nodes.push(new THREE.Vector3(2.32 * Math.sin(t) * Math.cos(ph), 2.32 * Math.cos(t), 2.32 * Math.sin(t) * Math.sin(ph)));
+    }
+    const segs = [];
+    for (let a = 0; a < NODES; a++) for (let b = a + 1; b < NODES; b++) if (nodes[a].distanceTo(nodes[b]) < .78) segs.push(nodes[a].x, nodes[a].y, nodes[a].z, nodes[b].x, nodes[b].y, nodes[b].z);
+    const lineGeo = new THREE.BufferGeometry(); lineGeo.setAttribute('position', new THREE.Float32BufferAttribute(segs, 3));
+    const lineMat = new THREE.LineBasicMaterial({ color: 0x8B5CF6, transparent: true, opacity: .35, blending: THREE.AdditiveBlending, depthWrite: false });
+    const net = new THREE.LineSegments(lineGeo, lineMat); group.add(net);
+
+    // Anneaux orbitaux
+    const ringMat = new THREE.MeshBasicMaterial({ color: 0x22D3EE, transparent: true, opacity: .18, side: THREE.DoubleSide, blending: THREE.AdditiveBlending, depthWrite: false });
+    const ring1 = new THREE.Mesh(new THREE.TorusGeometry(3.1, .006, 8, 200), ringMat); ring1.rotation.x = 1.25; group.add(ring1);
+    const ring2 = new THREE.Mesh(new THREE.TorusGeometry(3.5, .004, 8, 200), ringMat.clone()); ring2.rotation.set(1.1, .5, 0); ring2.material.opacity = .1; group.add(ring2);
+
+    // Étoiles lointaines
+    const SN = 900, sp = new Float32Array(SN * 3);
+    for (let i = 0; i < SN; i++) { sp[i*3] = rnd(-30, 30); sp[i*3+1] = rnd(-18, 18); sp[i*3+2] = rnd(-30, -6); }
+    const starGeo = new THREE.BufferGeometry(); starGeo.setAttribute('position', new THREE.BufferAttribute(sp, 3));
+    const stars = new THREE.Points(starGeo, new THREE.PointsMaterial({ color: 0x9a9ab0, size: .045, transparent: true, opacity: .55, depthWrite: false }));
+    scene.add(stars);
+
+    // Position de la forme par section (gauche / droite selon le texte)
+    const placeX = mobile ? [0, 0, 0, 0, 0, 0] : [2.3, -2.6, 2.9, -2.5, 0, 2.6];
+    const placeS = mobile ? [.8, .7, .75, .8, .75, .8] : [1, .95, 1, 1, 1.05, 1];
+
+    let progress = 0, target = 0;
+    const mouse = { x: 0, y: 0, sx: 0, sy: 0 };
+    addEventListener('pointermove', e => { mouse.x = e.clientX / innerWidth - .5; mouse.y = e.clientY / innerHeight - .5; });
+
+    function sectionProgress() {
+      const mid = scrollY + innerHeight * .5;
+      for (let i = 0; i < sections.length; i++) {
+        const top = sections[i].offsetTop, h = sections[i].offsetHeight;
+        if (mid < top + h || i === sections.length - 1) {
+          const f = Math.min(Math.max((mid - top) / h, 0), 1);
+          // on garde la forme au milieu de la section, transition sur la fin
+          const t = f < .55 ? 0 : (f - .55) / .45;
+          return Math.min(i + t, sections.length - 1);
+        }
+      }
+      return 0;
+    }
+
+    function resize() {
+      renderer.setSize(innerWidth, innerHeight, false);
+      camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix();
+    }
+    addEventListener('resize', resize); resize();
+
+    const ease = t => t < .5 ? 4*t*t*t : 1 - Math.pow(-2*t + 2, 3) / 2;
+    const clock = new THREE.Clock();
+    function frame() {
+      const t = clock.getElapsedTime();
+      target = sectionProgress();
+      progress += (target - progress) * (reduce ? 1 : .06);
+      const i = Math.floor(progress), f = ease(progress - i), j = Math.min(i + 1, shapes.length - 1);
+      const A = shapes[i], B = shapes[j];
+      for (let k = 0; k < pos.length; k++) pos[k] = A[k] + (B[k] - A[k]) * f;
+      geo.attributes.position.needsUpdate = true;
+
+      const px = placeX[i] + (placeX[j] - placeX[i]) * f, ps = placeS[i] + (placeS[j] - placeS[i]) * f;
+      group.position.x += (px - group.position.x) * .08;
+      group.scale.setScalar(ps);
+      const spin = reduce ? 0 : t * .12;
+      mouse.sx += (mouse.x - mouse.sx) * .05; mouse.sy += (mouse.y - mouse.sy) * .05;
+      group.rotation.y = spin + mouse.sx * .6 + (i === 2 || i === 4 ? -spin * .85 : 0);
+      group.rotation.x = mouse.sy * .4 + (i === 5 ? .35 * f : 0) + (i === 4 && f > 0 ? .35 * f : 0);
+      net.material.opacity = Math.max(0, .35 * (1 - progress * 1.8));
+      ring1.material.opacity = .18 * Math.max(.25, 1 - progress * .5);
+      ring1.rotation.z = reduce ? 0 : t * .2; ring2.rotation.z = reduce ? 0 : -t * .14;
+      stars.rotation.y = reduce ? 0 : t * .01;
+      camera.position.x += (mouse.sx * .8 - camera.position.x) * .05;
+      camera.position.y += (-mouse.sy * .5 - camera.position.y) * .05;
+      camera.lookAt(0, 0, 0);
+      mat.uniforms.uTime.value = reduce ? 0 : t;
+      renderer.render(scene, camera);
+      requestAnimationFrame(frame);
+    }
+    frame();
+  }
+
+  /* ------------------------------------------------------------ interface */
+  // Progression + section active
+  const bar = document.getElementById('progress');
+  const links = [...document.querySelectorAll('nav.top a')];
+  function onScroll() {
+    const max = document.documentElement.scrollHeight - innerHeight;
+    bar.style.transform = `scaleX(${max > 0 ? scrollY / max : 0})`;
+    const mid = scrollY + innerHeight * .45;
+    let cur = 0; sections.forEach((s, i) => { if (s.offsetTop <= mid) cur = i; });
+    links.forEach((a, i) => a.classList.toggle('on', i === cur));
+  }
+  addEventListener('scroll', onScroll, { passive: true }); onScroll();
+
+  // Halo qui suit le curseur
+  const glow = document.getElementById('glow');
+  if (!reduce && !mobile) addEventListener('pointermove', e => { glow.style.transform = `translate3d(${e.clientX}px,${e.clientY}px,0)`; });
+
+  // Cartes inclinées en 3D sous la souris
+  if (!reduce) document.querySelectorAll('.tilt').forEach(el => {
+    el.addEventListener('pointermove', e => {
+      const r = el.getBoundingClientRect(), x = (e.clientX - r.left) / r.width, y = (e.clientY - r.top) / r.height;
+      el.style.transform = `perspective(1000px) rotateX(${(.5 - y) * 10}deg) rotateY(${(x - .5) * 12}deg) translateZ(6px)`;
+      el.style.setProperty('--mx', `${x * 100}%`); el.style.setProperty('--my', `${y * 100}%`);
+    });
+    el.addEventListener('pointerleave', () => { el.style.transform = ''; });
+    el.style.transition = 'transform .15s ease-out';
+  });
+
+  // Boutons magnétiques
+  if (!reduce) document.querySelectorAll('.magnet').forEach(b => {
+    b.addEventListener('pointermove', e => { const r = b.getBoundingClientRect(); b.style.transform = `translate(${(e.clientX - r.left - r.width/2) * .25}px, ${(e.clientY - r.top - r.height/2) * .35}px)`; });
+    b.addEventListener('pointerleave', () => { b.style.transform = ''; });
+  });
+
+  // Ligne tapée dans le terminal de l'accueil (le texte complet est déjà là au repos)
+  const lines = ['Get-Projet -Nom Nexus, Pulse, StationBlanche', 'Get-Focus | Sort-Object Passion -Descending', 'Test-Connection -Avenir -Count ∞', 'Start-Alternance -Niveau Licence'];
+  const typed = document.getElementById('typed');
+  if (!reduce) {
+    let li = 0;
+    const type = async () => {
+      await new Promise(r => setTimeout(r, 2600));
+      while (true) {
+        const s = lines[li];
+        for (let k = s.length; k >= 0; k--) { typed.textContent = s.slice(0, k); await new Promise(r => setTimeout(r, 18)); }
+        li = (li + 1) % lines.length;
+        const n = lines[li];
+        for (let k = 0; k <= n.length; k++) { typed.textContent = n.slice(0, k); await new Promise(r => setTimeout(r, 45 + Math.random() * 40)); }
+        await new Promise(r => setTimeout(r, 2400));
+      }
+    };
+    type();
+  }
+
+  // Animations GSAP : tout part d'un état visible (rien n'attend le défilement pour apparaître)
+  if (window.gsap && !reduce) {
+    gsap.registerPlugin(ScrollTrigger);
+    const name = document.querySelector('#name .grad');
+    // Chaque lettre recoit sa tranche du degrade (sinon le texte « clippe » disparait une fois les lettres animees)
+    const letters = [...name.textContent], n = letters.length;
+    name.classList.remove('grad');
+    name.innerHTML = letters.map((c, k) => `<span class="ch grad" style="background-size:${n * 100}% 100%;background-position:${n > 1 ? k / (n - 1) * 100 : 0}% 0">${c}</span>`).join('');
+    gsap.from('#name .ch', { yPercent: 70, rotateX: -80, duration: 1.1, stagger: .06, ease: 'expo.out', transformOrigin: '50% 100%' });
+    gsap.from('.role, .typed, .chips .chip, .cta .btn', { y: 24, duration: .9, stagger: .07, ease: 'power3.out', delay: .2 });
+    gsap.utils.toArray('.reveal').forEach(el => {
+      gsap.from(el, { y: 70, rotateX: 8, transformPerspective: 900, duration: 1.1, ease: 'power3.out', scrollTrigger: { trigger: el, start: 'top 88%' } });
+    });
+    gsap.utils.toArray('.step, .missions li, .skill, .card').forEach((el, k) => {
+      gsap.from(el, { y: 40, scale: .97, duration: .8, ease: 'power3.out', scrollTrigger: { trigger: el, start: 'top 92%' }, delay: (k % 3) * .06 });
+    });
+    // Compteurs
+    document.querySelectorAll('[data-count]').forEach(el => {
+      const end = +el.dataset.count, pre = el.dataset.prefix || '', suf = el.dataset.suffix || '', o = { v: 0 };
+      gsap.to(o, { v: end, duration: 1.8, ease: 'power2.out', scrollTrigger: { trigger: el, start: 'top 95%' },
+        onUpdate: () => { el.textContent = pre + Math.round(o.v).toLocaleString('fr-FR') + suf; } });
+    });
+    // Parallaxe légère des titres
+    gsap.utils.toArray('h2').forEach(h => gsap.to(h, { yPercent: -18, ease: 'none', scrollTrigger: { trigger: h, scrub: true } }));
+  }
+})();
+</script>
+</body>
+</html>
